@@ -236,7 +236,8 @@ class MainWindow(QMainWindow):
         
     def load_db(self):
         options = QFileDialog.Options()
-        db_path, _ = QFileDialog.getOpenFileName(self, "Select DB File", os.path.dirname(__file__), "SQLite Files (*.db);;All Files (*)", options=options)
+        initial_dir = '/data1/lpf/database/'
+        db_path, _ = QFileDialog.getOpenFileName(self, "Select DB File", initial_dir, "SQLite Files (*.db);;All Files (*)", options=options)
         if db_path:
             try:
                 engine = create_engine(f'sqlite:///{db_path}')
