@@ -443,6 +443,12 @@ class MainWindow(QMainWindow):
             else:
                 QMessageBox.critical(self, "Error", f"Image {image_path} not found in the database.")
                 return
+            
+        if self.selected_images:
+            image_path = list(self.selected_images)[0]
+            ladybird_id = os.path.basename(os.path.dirname(os.path.dirname(image_path)))
+            if hasattr(self, 'detail_window') and self.detail_window is not None:
+                self.detail_window.update_detail(ladybird_id)
                         
         self.db_session.commit()
         self.selected_images.clear()
