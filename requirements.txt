@@ -1,0 +1,4 @@
+numpy==2.0.1
+PyQt5==5.15.11
+SQLAlchemy==2.0.35
+
