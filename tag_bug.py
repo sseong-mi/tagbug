@@ -1,7 +1,7 @@
 import sys
 import os
 import numpy as np
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QGridLayout, QHBoxLayout, QMenu, QInputDialog, QProgressBar, QRubberBand, QShortcut
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QGridLayout, QHBoxLayout, QMenu, QInputDialog, QProgressBar, QRubberBand, QShortcut, QDialog, QLineEdit
 from PyQt5.QtGui import QPixmap, QContextMenuEvent, QImage, QKeySequence, QIcon, QPainter, QPen
 from PyQt5.QtCore import Qt, QRect, QPoint, QSize
 from sqlalchemy import create_engine
@@ -137,7 +137,9 @@ class MainWindow(QMainWindow):
         self.detail_windows = []  # 디테일 윈도우 참조 저장
         self.initUI()
         self.db_session = None
-        self.images_per_page = 100
+        self.grid_width = 10
+        self.grid_height = 10
+        self.images_per_page = self.grid_width * self.grid_height
         self.current_page = 0
         self.selected_images = set()
         self.class_filters = set()
@@ -192,6 +194,10 @@ class MainWindow(QMainWindow):
         grayscale_action.setChecked(False)
         grayscale_action.triggered.connect(self.toggle_grayscale)
         option_menu.addAction(grayscale_action)
+
+        ratio_action = QAction("Grid Ratio", self)
+        ratio_action.triggered.connect(self.show_ratio_dialog)
+        option_menu.addAction(ratio_action)
         
         self.main_widget = QWidget(self)
         self.setCentralWidget(self.main_widget)
@@ -337,7 +343,7 @@ class MainWindow(QMainWindow):
             
             self.page_info_label.setText(f"Page: {start_index + 1} - {start_index + len(ladybirds)} / Total Images: {total_count}")
             
-            position = [(i, j) for i in range(10) for j in range(10)]
+            position = [(i, j) for i in range(self.grid_height) for j in range(self.grid_width)]
             
             for pos, ladybird in zip(position, ladybirds):
                 base_path = f'/data1/lpf/augmented_230823/{ladybird.id}/ladybirds/'
@@ -519,6 +525,56 @@ class MainWindow(QMainWindow):
             self.detail_window = DetailWindow(self, self.db_session)
         self.detail_window.show()
         self.detail_window.update_detail(ladybird_id)
+
+
+    def show_ratio_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Set Grid Ratio")
+        layout = QVBoxLayout()
+        
+        width_layout = QHBoxLayout()
+        width_label = QLabel("Width:")
+        self.width_input = QLineEdit()
+        self.width_input.setText(str(self.grid_width))
+        width_layout.addWidget(width_label)
+        width_layout.addWidget(self.width_input)
+        
+        height_layout = QHBoxLayout()
+        height_label = QLabel("Height:")
+        self.height_input = QLineEdit()
+        self.height_input.setText(str(self.grid_height))
+        height_layout.addWidget(height_label)
+        height_layout.addWidget(self.height_input)
+        
+        apply_button = QPushButton("Apply")
+        apply_button.clicked.connect(lambda: self.apply_ratio(dialog))
+        
+        layout.addLayout(width_layout)
+        layout.addLayout(height_layout)
+        layout.addWidget(apply_button)
+        dialog.setLayout(layout)
+        dialog.exec_()
+
+    def apply_ratio(self, dialog):
+        try:
+            new_width = int(self.width_input.text())
+            new_height = int(self.height_input.text())
+            if new_width > 0 and new_height > 0:
+                self.grid_width = new_width
+                self.grid_height = new_height
+                self.images_per_page = self.grid_width * self.grid_height
+                
+                # 이미지 크기(100) + 여백(20)을 고려한 새로운 창 크기 계산
+                new_window_width = (self.grid_width * 100)  # 좌우 여백 40px 추가
+                new_window_height = (self.grid_height * 126)  # 상단 메뉴바, 버튼 등 고려하여 120px 추가
+                
+                # 창 크기 조정
+                self.resize(new_window_width, new_window_height)
+                
+                dialog.accept()
+                self.display_images()
+        except ValueError:
+            QMessageBox.warning(self, "Error", "Please enter valid numbers")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
