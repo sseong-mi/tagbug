@@ -1,7 +1,7 @@
 import sys
 import os
 import numpy as np
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QGridLayout, QHBoxLayout, QMenu, QInputDialog, QProgressBar, QRubberBand, QShortcut, QDialog, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QGridLayout, QHBoxLayout, QMenu, QInputDialog, QProgressBar, QRubberBand, QShortcut, QDialog, QLineEdit, QTextEdit
 from PyQt5.QtGui import QPixmap, QContextMenuEvent, QImage, QKeySequence, QIcon, QPainter, QPen
 from PyQt5.QtCore import Qt, QRect, QPoint, QSize
 from sqlalchemy import create_engine
@@ -130,6 +130,38 @@ class DetailWindow(QMainWindow):
 
             self.pattern_label.setPixmap(pixmap.scaled(400, 400, Qt.KeepAspectRatio))
 
+class LabelCountWindow(QDialog):
+    def __init__(self, parent=None, db_session=None):
+        super().__init__(parent)
+        self.db_session = db_session
+        self.initUI()
+        
+    def initUI(self):
+        self.setWindowTitle('Label Count')
+        self.setGeometry(300, 300, 400, 500)
+        
+        layout = QVBoxLayout()
+        
+        # 텍스트 에디터 생성
+        self.text_display = QTextEdit()
+        self.text_display.setReadOnly(True)
+        layout.addWidget(self.text_display)
+        
+        self.setLayout(layout)
+        self.update_counts()
+        
+    def update_counts(self):
+        if self.db_session:
+            all_labels = [item.class_ for item in self.db_session.query(LadybirdDB.class_).distinct()]
+            result_text = "Current Label Count:\n\n"
+            
+            for label in all_labels:
+                if label:
+                    count = self.db_session.query(LadybirdDB).filter(LadybirdDB.class_==label).count()
+                    result_text += f"{label}: {count}\n"
+            
+            self.text_display.setText(result_text)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -181,6 +213,11 @@ class MainWindow(QMainWindow):
         all_deactivate_action.triggered.connect(self.all_deactivate)
         self.view_menu.addAction(all_deactivate_action)
 
+        # View 메뉴에 Label Count 액션 추가
+        self.view_menu.addSeparator()
+        label_count_action = QAction('Label Count', self)
+        label_count_action.triggered.connect(self.show_label_count)
+        self.view_menu.addAction(label_count_action)
 
         select_menu = menubar.addMenu('Select')
         unselect_all_action = QAction('Unselect All', self)
@@ -263,7 +300,16 @@ class MainWindow(QMainWindow):
             try:
                 npy_paths = np.load(npy_path, allow_pickle=True)
                 self.npy_paths = [path.split('/')[4] for path in npy_paths]
+                self.current_page = 0
+                npy_filename = os.path.basename(npy_path)
+                self.setWindowTitle(f'Tag Bug - {npy_filename}')
                 self.display_images()
+                
+                # Update label count window if it exists
+                for child in self.children():
+                    if isinstance(child, LabelCountWindow):
+                        child.update_counts()
+                    
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"An error occurred while loading the NPY file: {str(e)}")
 
@@ -296,7 +342,7 @@ class MainWindow(QMainWindow):
 
     def update_class_filter_menu(self):
         for action in self.view_menu.actions():
-            if action.text() not in ['NPY Deactivate', 'All Activate', 'All Deactivate']:
+            if action.text() not in ['NPY Deactivate', 'All Activate', 'All Deactivate', 'Label Count']:
                 self.view_menu.removeAction(action)
         self.view_menu.addSeparator()
         for cls in self.all_classes:
@@ -362,6 +408,11 @@ class MainWindow(QMainWindow):
                             error_label = QLabel(f"Failed to load image: {image_path}", self)
                             self.grid_layout.addWidget(error_label, *pos)
 
+        # Update label count window if it exists
+        for child in self.children():
+            if isinstance(child, LabelCountWindow):
+                child.update_counts()
+
     def load_image(self, image_path):
         if os.path.exists(image_path):
             image = QImage(image_path)
@@ -390,6 +441,7 @@ class MainWindow(QMainWindow):
 
     def npy_deactivate(self):
         self.npy_paths = None
+        self.setWindowTitle('Tag Bug')
         self.display_images()
 
     def remove_selected_images(self):
@@ -461,6 +513,11 @@ class MainWindow(QMainWindow):
         self.selected_images.clear()
         self.load_all_classes()
         self.display_images()
+        
+        # Update label count window if it exists
+        for child in self.children():
+            if isinstance(child, LabelCountWindow):
+                child.update_counts()
 
     def toggle_grayscale(self):
         self.grayscale = not self.grayscale
@@ -576,6 +633,13 @@ class MainWindow(QMainWindow):
                 self.display_images()
         except ValueError:
             QMessageBox.warning(self, "Error", "Please enter valid numbers")
+
+    def show_label_count(self):
+        if self.db_session:
+            count_window = LabelCountWindow(self, self.db_session)
+            count_window.show()
+        else:
+            QMessageBox.warning(self, "Warning", "Please load database first.")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
