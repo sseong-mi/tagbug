@@ -147,6 +147,14 @@ class LabelCountWindow(QDialog):
         self.text_display.setReadOnly(True)
         layout.addWidget(self.text_display)
         
+        # 리로드 버튼 생성
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        reload_button = QPushButton('Reload')
+        reload_button.clicked.connect(self.update_counts)
+        button_layout.addWidget(reload_button)
+        
+        layout.addLayout(button_layout)
         self.setLayout(layout)
         self.update_counts()
         
@@ -306,9 +314,9 @@ class MainWindow(QMainWindow):
                 self.display_images()
                 
                 # Update label count window if it exists
-                for child in self.children():
-                    if isinstance(child, LabelCountWindow):
-                        child.update_counts()
+                # for child in self.children():
+                #     if isinstance(child, LabelCountWindow):
+                #         child.update_counts()
                     
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"An error occurred while loading the NPY file: {str(e)}")
@@ -409,9 +417,9 @@ class MainWindow(QMainWindow):
                             self.grid_layout.addWidget(error_label, *pos)
 
         # Update label count window if it exists
-        for child in self.children():
-            if isinstance(child, LabelCountWindow):
-                child.update_counts()
+        # for child in self.children():
+        #     if isinstance(child, LabelCountWindow):
+        #         child.update_counts()
 
     def load_image(self, image_path):
         if os.path.exists(image_path):
@@ -515,9 +523,9 @@ class MainWindow(QMainWindow):
         self.display_images()
         
         # Update label count window if it exists
-        for child in self.children():
-            if isinstance(child, LabelCountWindow):
-                child.update_counts()
+        # for child in self.children():
+        #     if isinstance(child, LabelCountWindow):
+        #         child.update_counts()
 
     def toggle_grayscale(self):
         self.grayscale = not self.grayscale
