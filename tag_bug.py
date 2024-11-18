@@ -455,7 +455,8 @@ class MainWindow(QMainWindow):
             ladybird_id = os.path.basename(os.path.dirname(os.path.dirname(image_path)))
             if hasattr(self, 'detail_window') and self.detail_window is not None:
                 self.detail_window.update_detail(ladybird_id)
-                        
+
+        print(f"\n{len(self.selected_images)}개의 이미지가 {new_class} 클래스로 추가되었습니다.")                
         self.db_session.commit()
         self.selected_images.clear()
         self.load_all_classes()
